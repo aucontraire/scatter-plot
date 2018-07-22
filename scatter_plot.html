@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8">
+		<meta http-equiv="X-UA-Compatible" content="IE=edge">
+		<meta name="viewport" content="width=device-width, initial-scale=1">
+		<meta name="description" content="">
+	    <meta name="author" content="">
+		<title>Scatterplot</title>
+		
+		<link rel="stylesheet" href="https://jqueryui.com/jquery-wp-content/themes/jqueryui.com/style.css">
+		<link rel="stylesheet" href="https://code.jquery.com/ui/1.11.4/themes/smoothness/jquery-ui.css">
+		
+		<!-- jQuery -->
+		<script src="https://ajax.googleapis.com/ajax/libs/jquery/1.11.3/jquery.min.js"></script>	 
+		<script src="https://code.jquery.com/ui/1.11.4/jquery-ui.js"></script>   
+	    
+	    <!-- d3.js -->
+	    <script src="https://d3js.org/d3.v3.min.js" charset="utf-8"></script>	    
+	    
+	    <script>
+	    	$(document).ready(function() {
+	    		
+	    		var grades_data = [],
+	    			grades = [];
+	    		
+	    		var score_max = 100,
+	    			score_min = 0,
+	    			age_max = 18,
+	    			age_min = 5;
+	    		
+	    		var data_generator = (function() {
+	    	        var gen = d3.random.normal(score_max / 2, 15);
+	    	        return function() {
+	    	            return Math.floor(Math.max(score_min, Math.min(gen(), score_max)));
+	    	        }
+	    	    }());
+	    		
+	    		var populate_data = function(age_min, age_max) {
+		    		for (var i = 0; i < 1000; i++) {
+		    			var age = Math.floor(Math.random() * (age_max - age_min + 1)) + age_min;	    		
+		    			var grade = data_generator();
+		    			
+		    			grades_data.push({age, grade});
+		    			grades.push(grade);
+		    		}
+		    		
+		    		return [grades_data, grades];
+	    		}
+	    		
+	    		var adjust_hist_data = function(age_min, age_max) {
+	    			var grades = [];
+	    			
+	    			for (var i = 0; i < grades_data.length; i++) {
+	    				var age = grades_data[i]['age'];
+	    				if (age >= age_min && age <= age_max) {
+	    					grades.push(grades_data[i]['grade']);
+	    				}
+	    			}
+	    			
+	    			return grades;
+	    		}
+	    		    		
+	    	    var margin = { top: 20, right: 20, bottom: 30, left: 40 },
+	    	        width = 600 - margin.left - margin.right,
+	    	        height = 600 - margin.top - margin.bottom;
+
+				var x_value = function(d) { return d.age; },
+					x_scale = d3.scale.linear().range([0, width]),
+					x_map = function(d) { return x_scale(x_value(d)); },
+					x_axis = d3.svg.axis().scale(x_scale).orient("bottom");
+				
+				var y_value = function(d) { return d.grade; },
+					y_scale = d3.scale.linear().range([height, 0]),
+					y_map = function(d) { return y_scale(y_value(d)); },
+					y_axis = d3.svg.axis().scale(y_scale).orient("left");
+	    	    				
+				var svg = d3.select("#chart").append("svg")
+					.attr("width", width + margin.left + margin.right)
+					.attr("height", height + margin.top + margin.bottom)
+					.append("g")
+					.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+				
+				var tooltip = d3.select("body").append("div")
+					.attr("class", "tooltip")
+					.style("opacity", 0);
+				
+				grades_data = populate_data(age_min, age_max)[0];
+					    	    	
+    	    	x_scale.domain([d3.min(grades_data, x_value) - 1, d3.max(grades_data, x_value) + 1]);
+    	    	y_scale.domain([d3.min(grades_data, y_value), d3.max(grades_data, y_value) + 1]);
+    	    	
+    	    	svg.append("g")
+    	    		.attr("class", "x axis")
+    	    		.attr("transform", "translate(0," + height + ")")
+    	    		.call(x_axis)
+    	    		.append("text")
+    	    		.attr("class", "label")
+    	    		.attr("x", width / 2)
+    	    		.attr("y", 25)
+    	    		.style("text-anchor", "end")
+    	    		.text("Age");
+    	    		
+    	    	svg.append("g")
+    	    		.attr("class", "y axis")
+    	    		.call(y_axis)
+    	    		.append("text")
+    	    		.attr("class", "label")
+    	    		.attr("transform", "rotate(-90)")
+    	    		.attr("x", -(height / 2))
+    	    		.attr("y", -35)	    	    		
+    	    		.attr("dy", ".71em")
+    	    		.style("text-anchor", "end")
+    	    		.text("Grade");
+    	    		
+    	    	svg.selectAll(".dot")
+    	    		.data(grades_data)
+    	    		.enter().append("circle")
+    	    		.attr("class", "dot")
+    	    		.attr("r", 3)
+    	    		.attr("cx", x_map)
+    	    		.attr("cy", y_map)
+    	    		.style("opacity", .7)
+	    	    	.on("mouseover", function(d) {
+	    	            tooltip.transition()
+	    	                 .duration(200)
+	    	                 .style("opacity", .9);
+	    	            tooltip.html("Age/grade" + "<br/> (" + x_value(d) 
+	    	  	        + ", " + y_value(d) + ")")
+	    	                 .style("left", (d3.event.pageX + 5) + "px")
+	    	                 .style("top", (d3.event.pageY - 28) + "px");
+	    	        })
+	    	    	.on("mouseout", function(d) {
+	    	            tooltip.transition()
+	    	                 .duration(500)
+	    	                 .style("opacity", 0);
+	    	        });	    	    		    	    		    	    		    	    	
+	 
+	    	    	    	    	    	   	    	   	    	    
+	    	    var format_count = d3.format(",.0f");
+	    	  	        	    	    	    
+	    	    var x_gh_scale = d3.scale.linear().range([0, width])
+	    	    	.domain([0, score_max]),
+	    	    	x_gh_axis = d3.svg.axis().scale(x_gh_scale).orient("bottom");
+
+	    	    var data = d3.layout.histogram()
+	    	    	.bins(20)
+	    	    	(grades);    	   	
+	    	   	
+	    	    var y_gh_scale = d3.scale.linear().range([height, 0])
+				    .domain([0, d3.max(data, function(d) {
+				        return d.y;
+				    })]);				    
+	    	    	    	    	    	    
+	    	    var grade_histo_svg = d3.select("#grade_histogram").append("svg")
+	    	    	.attr("width", width + margin.left + margin.right)
+	    	    	.attr("height", height + margin.top + margin.bottom)
+	    	    	.append("g")
+	    	    	.attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+	    	    
+	    	    var bar = grade_histo_svg.selectAll(".bar")
+	    	    	.data(data)
+	    	    	.enter().append("g")
+	    	    	.attr("class", "bar")
+				    .attr("transform", function(d) {
+				        return "translate(" + x_gh_scale(d.x) + "," + y_gh_scale(d.y) + ")";
+				    });
+	    	    		    	    
+	    	    bar.append("rect")
+	    	    	.attr("x", 1)
+	    	    	.attr("width", x_gh_scale(data[0].dx) - 1)	    	    	
+	    	    	.attr("height", function(d) {
+        				return height - y_gh_scale(d.y);      				
+   	 				});
+	    	    
+	    	    bar.append("text")
+		    	    .attr("dy", ".75em")
+		    	    .attr("y", 6)
+		    	    .attr("x", x_gh_scale(data[0].dx) / 2)
+		    	    .attr("text-anchor", "middle")
+		    	    .text(function(d) {
+		    	        return format_count(d.y);
+		    	    });
+	    	    	    	    
+	    	    grade_histo_svg.append("g")
+		    	    .attr("class", "x axis")
+		    	    .attr("transform", "translate(0," + height + ")")
+		    	    .call(x_gh_axis);	    	    	
+	    	    	   
+		    	   
+	    	    
+	    	    
+	    	    var x_series = d3.range(age_min, 19);
+	    	    var y_series = grades_data.map(function(d) { return d.grade; });
+	    	    
+	    	    var least_squares_coeff = least_squares(x_series, y_series);
+	    	    
+	    	    var x1 = x_series[0];
+	    	    var y1 = least_squares_coeff[0] + least_squares_coeff[1];
+	    	    var x2 = x_series[x_series.length - 1];
+	    	    var y2 = least_squares_coeff[0] * x_series.length + least_squares_coeff[1];
+	    	    var trend_data = [[x1, y1, x2, y2]];
+	    	    
+	    	    var trendline = svg.selectAll(".trendline")
+	    	    	.data(trend_data);	    	    
+	    	   		    	   	
+	    	    trendline.enter()
+		    		.append("line")
+		    	    .attr("class", "trendline")
+		    		.attr("x1", function(d) { return x_scale(d[0]); })
+		    	    .attr("y1", function(d) { return y_scale(d[1]); })
+		    	    .attr("x2", function(d) { return x_scale(d[2]); })
+		    	    .attr("y2", function(d) { return y_scale(d[3]); });
+	    	    
+		    	svg.append("text")
+		    	    .text(d3.round(least_squares_coeff[0], 2) + "x + " + d3.round(least_squares_coeff[1], 2))
+		    	    .attr("class", "text-label")
+		    	    .attr("x", 450)
+		    	    .attr("y", 0)
+		    	    .attr("fill", "red");    
+	
+		    	svg.append("text")
+		    	    .text("r²: " + d3.round(least_squares_coeff[2], 3))
+		    	    .attr("class", "text-label")
+		    	    .attr("x", 450)
+		    	    .attr("y", 20)		    	    
+		    	    .attr("fill", "red");
+	
+	
+		    	function least_squares(x_series, y_series) {
+		    	    var reduce_sum_func = function(prev, cur) { return prev + cur; };
+	
+		    	    var x_bar = x_series.reduce(reduce_sum_func) * 1.0 / x_series.length;
+		    	    var y_bar = y_series.reduce(reduce_sum_func) * 1.0 / y_series.length;
+	
+		    	    var ss_xx = x_series.map(function(d) { return Math.pow(d - x_bar, 2); })
+		    	    	.reduce(reduce_sum_func);
+	
+		    	    var ss_yy = y_series.map(function(d) { return Math.pow(d - y_bar, 2); })
+		    	    	.reduce(reduce_sum_func);
+	
+		    	    var ss_xy = x_series.map(function(d, i) { return (d - x_bar) * (y_series[i] - y_bar); })
+		    	    	.reduce(reduce_sum_func);
+	
+		    	    var slope = ss_xy / ss_xx;
+		    	    var intercept = y_bar - (x_bar * slope);
+		    	    var rSquare = Math.pow(ss_xy, 2) / (ss_xx * ss_yy);
+	
+		    	    return [slope, intercept, rSquare];
+		    	}	    	    
+
+	    	    
+	    	    
+	    	    	    	    
+	    	    $(function() {
+					$("#slider-range").slider({
+						range: true,
+						min: age_min,
+						max: age_max,
+						values: [age_min, age_max],
+						slide: function(event, ui) {
+							$("#age").val(ui.values[0] + " - " + ui.values[1] );	
+							
+							x_scale.domain([ui.values[0], ui.values[1]]);
+							
+							svg.selectAll("g.x.axis")
+								.call(x_axis);
+							
+							svg.selectAll(".dot")								
+								.remove();																				
+							
+							svg.selectAll(".dot")
+								.data(grades_data)
+								.enter().append("circle")
+								.attr("class", "dot")
+			    	    		.attr("r", 3)
+			    	    		.attr("cx", x_map)
+			    	    		.attr("cy", y_map)
+			    	    		.style("opacity", .7)
+				    	    	.on("mouseover", function(d) {
+				    	            tooltip.transition()
+				    	                 .duration(200)
+				    	                 .style("opacity", .9);
+				    	            tooltip.html("Age/grade" + "<br/> (" + x_value(d) 
+				    	  	        + ", " + y_value(d) + ")")
+				    	                 .style("left", (d3.event.pageX + 5) + "px")
+				    	                 .style("top", (d3.event.pageY - 28) + "px");
+				    	        })
+				    	    	.on("mouseout", function(d) {
+				    	            tooltip.transition()
+				    	                 .duration(500)
+				    	                 .style("opacity", 0);
+				    	        });		
+										
+							
+							// Update histogram
+							grades = adjust_hist_data(ui.values[0], ui.values[1]);							
+							
+	    		    	    var data = d3.layout.histogram()
+	    	    	    	.bins(ui.value)
+	    	    	    	(grades);	
+    		    	    
+    		            	y_gh_scale.domain([0, d3.max(data, function(d){
+    		            		return d.length
+    		            	})]);
+    		            	    		           	    	            		    		    	 	    		    	    
+	    		    	    grade_histo_svg.selectAll(".bar") 	    		    	   
+	    		    	    	.remove();
+	    		    	    
+	    		    	    var bar = grade_histo_svg.selectAll(".bar")
+		    	    	    	.data(data)
+		    	    	    	.enter().append("g")
+		    	    	    	.attr("class", "bar")
+		    				    .attr("transform", function(d) {
+		    				        return "translate(" + x_gh_scale(d.x) + "," + y_gh_scale(d.y) + ")";
+	    				    	});	    	            	
+	    	            	
+		    	    	    bar.append("rect")
+		    	    	    	.attr("x", 1)
+		    	    	    	.attr("width", x_gh_scale(data[0].dx) - 1)	    	    	
+		    	    	    	.attr("height", function(d) {
+		            				return height - y_gh_scale(d.y);      				
+		       	 				});
+	    	            	
+		    	    	    bar.append("text")
+		    		    	    .attr("dy", ".75em")
+		    		    	    .attr("y", 6)
+		    		    	    .attr("x", x_gh_scale(data[0].dx) / 2)
+		    		    	    .attr("text-anchor", "middle")
+		    		    	    .text(function(d) {
+		    		    	        return format_count(d.y);
+		    		    	    });																						
+											
+		    	    	    
+						}
+					});
+					$("#age").val( $("#slider-range").slider("values", 0) + " - " + $("#slider-range").slider( "values", 1 ) );
+	    	    });	    
+	    	    
+	    	    $(function() {
+	    	        $("#slider-range-max").slider({
+	    	        	range: "max",
+	    	          	min: 1,
+	    	          	max: 20,
+	    	          	value: 20,
+	    	          	slide: function(event, ui) {
+	    	            	$("#bins").val(ui.value);	    	            
+	    	            	
+	    		    	    var data = d3.layout.histogram()
+		    	    	    	.bins(ui.value)
+		    	    	    	(grades);	
+	    		    	    
+	    		            y_gh_scale.domain([0, d3.max(data, function(d){
+	    		            	return d.length
+	    		            })]);
+	    		            	    		           	    	            		    		    	 	    		    	    
+	    		    	    grade_histo_svg.selectAll(".bar") 	    		    	   
+	    		    	    	.remove();
+	    		    	    
+	    		    	    var bar = grade_histo_svg.selectAll(".bar")
+		    	    	    	.data(data)
+		    	    	    	.enter().append("g")
+		    	    	    	.attr("class", "bar")
+		    				    .attr("transform", function(d) {
+		    				        return "translate(" + x_gh_scale(d.x) + "," + y_gh_scale(d.y) + ")";
+	    				    	});	    	            	
+	    	            	
+		    	    	    bar.append("rect")
+		    	    	    	.attr("x", 1)
+		    	    	    	.attr("width", x_gh_scale(data[0].dx) - 1)	    	    	
+		    	    	    	.attr("height", function(d) {
+		            				return height - y_gh_scale(d.y);      				
+		       	 				});
+	    	            	
+		    	    	    bar.append("text")
+		    		    	    .attr("dy", ".75em")
+		    		    	    .attr("y", 6)
+		    		    	    .attr("x", x_gh_scale(data[0].dx) / 2)
+		    		    	    .attr("text-anchor", "middle")
+		    		    	    .text(function(d) {
+		    		    	        return format_count(d.y);
+		    		    	    });		    	    	 		    	    	   	    	            	
+	    	        	}
+	    	        });
+	    	        $("#bins").val( $("#slider-range-max").slider("value"));
+	    	      });		    	    	    	    	    	    	    		
+	    	});	
+	    </script>
+	    <style>
+	    	body {
+  				font: 11px sans-serif;
+			}
+			#scatter_container {
+				float:left;
+				margin: 0px;
+				padding: 0px;
+				border-radius: 10px;
+				border: 1px solid black;
+			}
+	    	.axis path, .axis line {
+			  fill: none;
+			  stroke: #000;
+			  shape-rendering: crispEdges;
+			}
+			.dot {
+			  stroke: #666;
+			  fill: #e5e4e4;
+			}
+			.tooltip {
+			  position: absolute;
+			  width: 50px;
+			  height: 30px;
+			  border-radius: 15px;
+			  border: 1px solid #ccc;
+			  padding: 5px;
+			  background-color: #fff;
+			  pointer-events: none;			  			
+			}
+			#slider-range {
+				width: 550px;
+				margin-bottom: 15px;
+			}
+			#histogram_container {
+				float:left;
+				margin: 0px;
+				padding: 0px;
+				border-radius: 10px;
+				border: 1px solid black;
+			}			
+			.bar rect {
+				fill: steelblue;
+    			shape-rendering: crispEdges;
+			}
+			.bar text {
+    			fill: #fff;
+			}
+			#slider-range-max {
+				width: 550px;
+				margin-bottom: 15px;
+			}
+			.trendline {
+			    stroke: green;
+			    stroke-width: 1;
+			}
+			.text-label {
+				font-size: 14px;
+			}
+	    </style>
+	</head>
+	<body>
+		<div id="age_histogram"></div>
+		<div id="scatter_container">
+			<div id="chart"></div>
+			<div align="center">
+				<p>
+					<label for="age">Age range:</label>
+					<input type="text" id="age" readonly style="border:0; color:#f6931f; font-weight:bold;">
+				</p>
+				<div id="slider-range"></div>
+			</div>
+		</div>
+		<div id="histogram_container">
+			<div id="grade_histogram"></div>
+			<div align="center">
+				<p>
+					<label for="bins">Number of bins:</label>
+					<input type="text" id="bins" readonly style="border:0; color:#f6931f; font-weight:bold;">
+				</p>
+				<div id="slider-range-max"></div>
+			</div>			
+		</div>
+	</body>
+</html>
